@@ -82,16 +82,16 @@ impl EventQuery {
     pub fn datetime_in_range(&self, datetime: &DateTime<Utc>) -> bool {
         let date = datetime.date_naive();
 
-        if let Some(from) = self.from_date {
-            if date < from {
-                return false;
-            }
+        if let Some(from) = self.from_date
+            && date < from
+        {
+            return false;
         }
 
-        if let Some(to) = self.to_date {
-            if date > to {
-                return false;
-            }
+        if let Some(to) = self.to_date
+            && date > to
+        {
+            return false;
         }
 
         true

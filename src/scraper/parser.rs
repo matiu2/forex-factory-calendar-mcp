@@ -116,10 +116,12 @@ impl CalendarParser {
 
         // Update time if present in this row
         let time_text = self.extract_text(row, &self.time_selector);
-        if !time_text.is_empty() && time_text != "All Day" && time_text != "Tentative" {
-            if let Some(parsed_time) = parse_time(&time_text) {
-                *current_time = Some(parsed_time);
-            }
+        if !time_text.is_empty()
+            && time_text != "All Day"
+            && time_text != "Tentative"
+            && let Some(parsed_time) = parse_time(&time_text)
+        {
+            *current_time = Some(parsed_time);
         }
 
         let time = current_time.unwrap_or(NaiveTime::from_hms_opt(0, 0, 0).unwrap());
@@ -163,11 +165,9 @@ impl CalendarParser {
 
     /// Extract impact level from the impact cell's span class.
     fn extract_impact(&self, row: &scraper::ElementRef) -> Option<Impact> {
-        row.select(&self.impact_selector).next().and_then(|el| {
-            el.value()
-                .attr("class")
-                .and_then(|class| Impact::from_ff_class(class))
-        })
+        row.select(&self.impact_selector)
+            .next()
+            .and_then(|el| el.value().attr("class").and_then(Impact::from_ff_class))
     }
 }
 
