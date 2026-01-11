@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
 use super::Impact;
@@ -15,8 +15,8 @@ pub struct EconomicEvent {
     /// Impact level on the market
     pub impact: Impact,
 
-    /// Scheduled date and time of the event (UTC)
-    pub datetime: DateTime<Utc>,
+    /// Scheduled date and time of the event (local timezone)
+    pub datetime: DateTime<Local>,
 
     /// Actual value (if released)
     pub actual: Option<String>,
@@ -55,7 +55,7 @@ mod tests {
             name: "Test Event".to_string(),
             currency: currency.to_string(),
             impact,
-            datetime: Utc.with_ymd_and_hms(2025, 6, 4, 12, 0, 0).unwrap(),
+            datetime: Local.with_ymd_and_hms(2025, 6, 4, 12, 0, 0).unwrap(),
             actual: None,
             forecast: Some("1.5%".to_string()),
             previous: Some("1.2%".to_string()),

@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
+use chrono::{Local, NaiveDate, NaiveDateTime, NaiveTime, TimeZone};
 use color_eyre::{Result, eyre::eyre};
 use scraper::{Html, Selector};
 use tracing::{debug, warn};
@@ -132,7 +132,11 @@ impl CalendarParser {
 
         let time = current_time.unwrap_or(NaiveTime::from_hms_opt(0, 0, 0).unwrap());
         let datetime = NaiveDateTime::new(*current_date, time);
-        let datetime_utc = Utc.from_utc_datetime(&datetime);
+        // Forex Factory times are shown in user's local timezone
+        let datetime_local = Local
+            .from_local_datetime(&datetime)
+            .single()
+            .unwrap_or_else(|| Local.from_utc_datetime(&datetime));
 
         let actual = self.extract_text(row, &self.actual_selector);
         let forecast = self.extract_text(row, &self.forecast_selector);
@@ -142,7 +146,7 @@ impl CalendarParser {
             name,
             currency,
             impact,
-            datetime: datetime_utc,
+            datetime: datetime_local,
             actual: if actual.is_empty() {
                 None
             } else {

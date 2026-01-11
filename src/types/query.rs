@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Local, NaiveDate};
 use serde::{Deserialize, Serialize};
 
 use super::Impact;
@@ -80,7 +80,7 @@ impl EventQuery {
     }
 
     /// Check if an event's datetime falls within the query date range
-    pub fn datetime_in_range(&self, datetime: &DateTime<Utc>) -> bool {
+    pub fn datetime_in_range(&self, datetime: &DateTime<Local>) -> bool {
         let date = datetime.date_naive();
 
         if let Some(from) = self.from_date
@@ -102,7 +102,7 @@ impl EventQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::TimeZone;
+    use chrono::{Local, TimeZone};
 
     #[test]
     fn test_with_currency_pair() {
@@ -151,22 +151,22 @@ mod tests {
         );
 
         // Within range
-        let dt = Utc.with_ymd_and_hms(2025, 6, 4, 12, 0, 0).unwrap();
+        let dt = Local.with_ymd_and_hms(2025, 6, 4, 12, 0, 0).unwrap();
         assert!(query.datetime_in_range(&dt));
 
         // Before range
-        let dt = Utc.with_ymd_and_hms(2025, 5, 31, 12, 0, 0).unwrap();
+        let dt = Local.with_ymd_and_hms(2025, 5, 31, 12, 0, 0).unwrap();
         assert!(!query.datetime_in_range(&dt));
 
         // After range
-        let dt = Utc.with_ymd_and_hms(2025, 6, 8, 12, 0, 0).unwrap();
+        let dt = Local.with_ymd_and_hms(2025, 6, 8, 12, 0, 0).unwrap();
         assert!(!query.datetime_in_range(&dt));
 
         // Boundary dates (inclusive)
-        let dt = Utc.with_ymd_and_hms(2025, 6, 1, 0, 0, 0).unwrap();
+        let dt = Local.with_ymd_and_hms(2025, 6, 1, 0, 0, 0).unwrap();
         assert!(query.datetime_in_range(&dt));
 
-        let dt = Utc.with_ymd_and_hms(2025, 6, 7, 23, 59, 59).unwrap();
+        let dt = Local.with_ymd_and_hms(2025, 6, 7, 23, 59, 59).unwrap();
         assert!(query.datetime_in_range(&dt));
     }
 
@@ -174,7 +174,7 @@ mod tests {
     fn test_datetime_in_range_open_ended() {
         // No constraints
         let query = EventQuery::new();
-        let dt = Utc.with_ymd_and_hms(2025, 6, 4, 12, 0, 0).unwrap();
+        let dt = Local.with_ymd_and_hms(2025, 6, 4, 12, 0, 0).unwrap();
         assert!(query.datetime_in_range(&dt));
 
         // Only from_date
@@ -182,8 +182,8 @@ mod tests {
             from_date: Some(NaiveDate::from_ymd_opt(2025, 6, 1).unwrap()),
             ..Default::default()
         };
-        assert!(query.datetime_in_range(&Utc.with_ymd_and_hms(2025, 6, 4, 12, 0, 0).unwrap()));
-        assert!(query.datetime_in_range(&Utc.with_ymd_and_hms(2099, 1, 1, 0, 0, 0).unwrap()));
-        assert!(!query.datetime_in_range(&Utc.with_ymd_and_hms(2025, 5, 31, 0, 0, 0).unwrap()));
+        assert!(query.datetime_in_range(&Local.with_ymd_and_hms(2025, 6, 4, 12, 0, 0).unwrap()));
+        assert!(query.datetime_in_range(&Local.with_ymd_and_hms(2099, 1, 1, 0, 0, 0).unwrap()));
+        assert!(!query.datetime_in_range(&Local.with_ymd_and_hms(2025, 5, 31, 0, 0, 0).unwrap()));
     }
 }
