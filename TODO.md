@@ -2,34 +2,47 @@
 
 ## Overview
 MCP server to query economic events from Forex Factory calendar.
-- Data source: Web scraping with headless browser
+- Data source: Web scraping with headless browser (Chromium)
 - Currency pairs: Query returns events for both currencies (OR logic)
 
-## Phase 1: Core Types and Data Model
-- [ ] Define `EconomicEvent` struct (name, currency, impact, datetime, actual, forecast, previous)
-- [ ] Define `Impact` enum (Low, Medium, High) with star conversion
-- [ ] Define `Currency` enum or use String with validation
-- [ ] Define query parameters struct (currencies, date range, min_impact)
+## Completed
+- [x] Define core types: EconomicEvent, Impact (Low/Medium/High), EventQuery
+- [x] Set up headless browser (headless_chrome crate)
+- [x] Implement HTML parsing for calendar events
+- [x] Set up MCP server with rmcp
+- [x] Implement tools:
+  - `query_events` - Filter by currency, date range, impact level
+  - `get_week_around` - Get events around a specific date
+  - `get_today_events` - Get today's events
+  - `get_week_events` - Get this week's events
 
-## Phase 2: Web Scraping
-- [ ] Set up headless browser (chromiumoxide or fantoccini)
-- [ ] Implement calendar page fetching with proper User-Agent
-- [ ] Parse HTML to extract events
-- [ ] Handle pagination for date ranges
-- [ ] Add caching layer to minimize requests
+## In Progress
+- [ ] Test end-to-end with actual Forex Factory data
 
-## Phase 3: MCP Server
-- [ ] Set up rmcp server structure
-- [ ] Implement `query_events` tool
-- [ ] Implement `get_week_events` tool
-- [ ] Implement `get_today_events` tool
-- [ ] Add proper error handling and responses
+## Optional / Future
+- [ ] Add caching layer to minimize browser requests
+- [ ] Add more sophisticated date parsing (e.g., "next week", "last month")
+- [ ] Support for commodity events (Oil, Gold)
 
-## Phase 4: Polish
-- [ ] Add configuration (cache TTL, browser path)
-- [ ] Write tests
-- [ ] Documentation
-- [ ] cargo clippy / cargo fmt
+## Usage
 
-## Current Status
-Starting Phase 1...
+Build:
+```bash
+cargo build --release
+```
+
+Configure in Claude Desktop (`~/.config/claude/claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "forex-calendar": {
+      "command": "/path/to/forex-factory-calendar-mcp"
+    }
+  }
+}
+```
+
+Example queries:
+- "What high-impact USD events are happening this week?"
+- "Show me AUD/CHF events around June 4th 2025"
+- "Get all economic events for today"
