@@ -1,7 +1,7 @@
 use chrono::{Datelike, NaiveDate};
 use color_eyre::{Result, eyre::eyre};
 use reqwest::Client;
-use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, USER_AGENT};
+use reqwest::header::{ACCEPT, ACCEPT_LANGUAGE, HeaderMap, HeaderValue, USER_AGENT};
 use std::time::Duration;
 use tracing::{debug, info};
 
@@ -30,42 +30,20 @@ impl HttpCalendarFetcher {
                 "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
             ),
         );
-        headers.insert(
-            ACCEPT_LANGUAGE,
-            HeaderValue::from_static("en-US,en;q=0.9"),
-        );
+        headers.insert(ACCEPT_LANGUAGE, HeaderValue::from_static("en-US,en;q=0.9"));
         headers.insert(
             "Sec-Ch-Ua",
-            HeaderValue::from_static("\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\""),
+            HeaderValue::from_static(
+                "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"",
+            ),
         );
-        headers.insert(
-            "Sec-Ch-Ua-Mobile",
-            HeaderValue::from_static("?0"),
-        );
-        headers.insert(
-            "Sec-Ch-Ua-Platform",
-            HeaderValue::from_static("\"Linux\""),
-        );
-        headers.insert(
-            "Sec-Fetch-Dest",
-            HeaderValue::from_static("document"),
-        );
-        headers.insert(
-            "Sec-Fetch-Mode",
-            HeaderValue::from_static("navigate"),
-        );
-        headers.insert(
-            "Sec-Fetch-Site",
-            HeaderValue::from_static("none"),
-        );
-        headers.insert(
-            "Sec-Fetch-User",
-            HeaderValue::from_static("?1"),
-        );
-        headers.insert(
-            "Upgrade-Insecure-Requests",
-            HeaderValue::from_static("1"),
-        );
+        headers.insert("Sec-Ch-Ua-Mobile", HeaderValue::from_static("?0"));
+        headers.insert("Sec-Ch-Ua-Platform", HeaderValue::from_static("\"Linux\""));
+        headers.insert("Sec-Fetch-Dest", HeaderValue::from_static("document"));
+        headers.insert("Sec-Fetch-Mode", HeaderValue::from_static("navigate"));
+        headers.insert("Sec-Fetch-Site", HeaderValue::from_static("none"));
+        headers.insert("Sec-Fetch-User", HeaderValue::from_static("?1"));
+        headers.insert("Upgrade-Insecure-Requests", HeaderValue::from_static("1"));
 
         let client = Client::builder()
             .default_headers(headers)
@@ -91,12 +69,14 @@ impl HttpCalendarFetcher {
 
     /// Fetch calendar HTML for today.
     pub async fn fetch_today(&self) -> Result<String> {
-        self.fetch_url("https://www.forexfactory.com/calendar?day=today").await
+        self.fetch_url("https://www.forexfactory.com/calendar?day=today")
+            .await
     }
 
     /// Fetch calendar HTML for this week.
     pub async fn fetch_this_week(&self) -> Result<String> {
-        self.fetch_url("https://www.forexfactory.com/calendar?week=this").await
+        self.fetch_url("https://www.forexfactory.com/calendar?week=this")
+            .await
     }
 
     /// Fetch the raw HTML from a URL.
