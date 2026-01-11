@@ -22,10 +22,12 @@ impl CalendarParser {
     /// Create a new parser with pre-compiled CSS selectors.
     pub fn new() -> Result<Self> {
         Ok(Self {
-            row_selector: Selector::parse("tr.calendar__row.calendar_row")
+            // Use data-event-id attribute to find actual event rows
+            row_selector: Selector::parse("tr[data-event-id]")
                 .map_err(|e| eyre!("Invalid row selector: {e:?}"))?,
             currency_selector: Selector::parse("td.calendar__currency")
                 .map_err(|e| eyre!("Invalid currency selector: {e:?}"))?,
+            // Impact icon is in a span with class like "icon--ff-impact-yel"
             impact_selector: Selector::parse("td.calendar__impact span")
                 .map_err(|e| eyre!("Invalid impact selector: {e:?}"))?,
             event_selector: Selector::parse("td.calendar__event span.calendar__event-title")
@@ -44,10 +46,14 @@ impl CalendarParser {
     /// Parse HTML content into a list of economic events.
     /// The `base_date` is used when time-only values are found (no date in the row).
     pub fn parse(&self, html: &str, base_date: NaiveDate) -> Result<Vec<EconomicEvent>> {
+        debug!("Parsing HTML of {} bytes for date {base_date}", html.len());
         let document = Html::parse_document(html);
         let mut events = Vec::new();
         let mut current_date = base_date;
         let mut current_time: Option<NaiveTime> = None;
+
+        let row_count = document.select(&self.row_selector).count();
+        debug!("Found {row_count} event rows in HTML");
 
         for row in document.select(&self.row_selector) {
             // TODO(human): Implement the event extraction logic here

@@ -4,19 +4,19 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::info;
 
-use crate::scraper::{CalendarFetcher, CalendarParser};
+use crate::scraper::{CalendarParser, HttpCalendarFetcher};
 use crate::types::{EconomicEvent, EventQuery, Impact};
 
 /// High-level service for fetching and querying economic events.
 pub struct CalendarService {
-    fetcher: Arc<Mutex<CalendarFetcher>>,
+    fetcher: Arc<Mutex<HttpCalendarFetcher>>,
     parser: CalendarParser,
 }
 
 impl CalendarService {
     /// Create a new calendar service.
     pub fn new() -> Result<Self> {
-        let fetcher = CalendarFetcher::new()?;
+        let fetcher = HttpCalendarFetcher::new()?;
         let parser = CalendarParser::new()?;
 
         Ok(Self {
@@ -34,7 +34,7 @@ impl CalendarService {
 
         // Fetch HTML from Forex Factory
         let fetcher = self.fetcher.lock().await;
-        let html = fetcher.fetch_date(base_date)?;
+        let html = fetcher.fetch_date(base_date).await?;
         drop(fetcher); // Release lock early
 
         // Parse events
@@ -57,7 +57,7 @@ impl CalendarService {
     pub async fn get_today_events(&self) -> Result<Vec<EconomicEvent>> {
         let today = Local::now().date_naive();
         let fetcher = self.fetcher.lock().await;
-        let html = fetcher.fetch_today()?;
+        let html = fetcher.fetch_today().await?;
         drop(fetcher);
 
         self.parser.parse(&html, today)
@@ -67,7 +67,7 @@ impl CalendarService {
     pub async fn get_week_events(&self) -> Result<Vec<EconomicEvent>> {
         let today = Local::now().date_naive();
         let fetcher = self.fetcher.lock().await;
-        let html = fetcher.fetch_this_week()?;
+        let html = fetcher.fetch_this_week().await?;
         drop(fetcher);
 
         self.parser.parse(&html, today)
@@ -76,7 +76,7 @@ impl CalendarService {
     /// Get events for a specific week containing the given date.
     pub async fn get_week_events_for(&self, date: NaiveDate) -> Result<Vec<EconomicEvent>> {
         let fetcher = self.fetcher.lock().await;
-        let html = fetcher.fetch_date(date)?;
+        let html = fetcher.fetch_date(date).await?;
         drop(fetcher);
 
         self.parser.parse(&html, date)

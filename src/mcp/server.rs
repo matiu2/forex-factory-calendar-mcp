@@ -4,7 +4,7 @@ use rmcp::{
     ErrorData as McpError, ServerHandler,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
     model::{Implementation, ServerCapabilities, ServerInfo},
-    tool, tool_router,
+    tool, tool_handler, tool_router,
 };
 use tokio::sync::RwLock;
 use tracing::{error, info};
@@ -244,6 +244,7 @@ impl ForexCalendarServer {
     }
 }
 
+#[tool_handler(router = self.tool_router)]
 impl ServerHandler for ForexCalendarServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
