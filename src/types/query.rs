@@ -40,6 +40,7 @@ impl EventQuery {
     }
 
     /// Set a single currency
+    #[allow(dead_code)]
     pub fn with_currency(mut self, currency: &str) -> Self {
         self.currencies = vec![currency.to_uppercase()];
         self

@@ -14,10 +14,30 @@ use crate::types::{EventQuery, Impact};
 
 use super::tools::{EventResult, QueryEventsParams, WeekAroundParams};
 
+/// Parse impact string and apply to query using with_min_stars for numeric values
+fn parse_and_apply_impact(query: EventQuery, min_impact: &str) -> EventQuery {
+    let s = min_impact.trim().to_lowercase();
+    match s.as_str() {
+        "low" => query.with_min_impact(Impact::Low),
+        "medium" | "med" => query.with_min_impact(Impact::Medium),
+        "high" => query.with_min_impact(Impact::High),
+        "1" | "2" | "3" => {
+            if let Ok(stars) = s.parse::<u8>() {
+                query.with_min_stars(stars)
+            } else {
+                query
+            }
+        }
+        _ => query,
+    }
+}
+
 /// MCP Server for Forex Factory Calendar
 #[derive(Clone)]
 pub struct ForexCalendarServer {
     service: Arc<RwLock<Option<CalendarService>>>,
+    /// Tool router required by the #[tool_router] macro
+    #[allow(dead_code)]
     tool_router: ToolRouter<Self>,
 }
 
@@ -136,26 +156,11 @@ impl ForexCalendarServer {
         let mut query = EventQuery::new().with_week_around(date);
 
         if let Some(ref currencies) = params.currencies {
-            let parsed: Vec<String> = currencies
-                .split(['/', ',', '-', ' '])
-                .map(|c| c.trim().to_uppercase())
-                .filter(|c| !c.is_empty())
-                .collect();
-            if !parsed.is_empty() {
-                query = query.with_currencies(parsed);
-            }
+            query = query.with_currency_pair(currencies);
         }
 
         if let Some(ref min_impact) = params.min_impact {
-            let impact = match min_impact.trim().to_lowercase().as_str() {
-                "low" | "1" => Some(Impact::Low),
-                "medium" | "med" | "2" => Some(Impact::Medium),
-                "high" | "3" => Some(Impact::High),
-                _ => None,
-            };
-            if let Some(imp) = impact {
-                query = query.with_min_impact(imp);
-            }
+            query = parse_and_apply_impact(query, min_impact);
         }
 
         // Fetch and filter events
