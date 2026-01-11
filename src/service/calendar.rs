@@ -28,9 +28,7 @@ impl CalendarService {
     /// Query events matching the given criteria.
     pub async fn query_events(&self, query: &EventQuery) -> Result<Vec<EconomicEvent>> {
         // Determine which date to fetch
-        let base_date = query
-            .from_date
-            .unwrap_or_else(|| Local::now().date_naive());
+        let base_date = query.from_date.unwrap_or_else(|| Local::now().date_naive());
 
         info!("Fetching calendar for date: {base_date}");
 
