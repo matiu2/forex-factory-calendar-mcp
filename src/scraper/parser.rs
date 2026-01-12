@@ -1,4 +1,4 @@
-use chrono::{Local, NaiveDate, NaiveDateTime, NaiveTime, TimeZone};
+use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, NaiveTime, TimeZone};
 use color_eyre::{Result, eyre::eyre};
 use scraper::{Html, Selector};
 use tracing::{debug, warn};
@@ -9,6 +9,7 @@ use crate::types::{EconomicEvent, Impact};
 pub struct CalendarParser {
     // Selectors are compiled once and reused
     row_selector: Selector,
+    date_selector: Selector,
     currency_selector: Selector,
     impact_selector: Selector,
     event_selector: Selector,
@@ -25,6 +26,8 @@ impl CalendarParser {
             // Use data-event-id attribute to find actual event rows
             row_selector: Selector::parse("tr[data-event-id]")
                 .map_err(|e| eyre!("Invalid row selector: {e:?}"))?,
+            date_selector: Selector::parse("td.calendar__date")
+                .map_err(|e| eyre!("Invalid date selector: {e:?}"))?,
             currency_selector: Selector::parse("td.calendar__currency")
                 .map_err(|e| eyre!("Invalid currency selector: {e:?}"))?,
             // Impact icon is in a span with class like "icon--ff-impact-yel"
@@ -44,25 +47,20 @@ impl CalendarParser {
     }
 
     /// Parse HTML content into a list of economic events.
-    /// The `base_date` is used when time-only values are found (no date in the row).
+    /// The `base_date` is used as fallback and to determine the year for date parsing.
     pub fn parse(&self, html: &str, base_date: NaiveDate) -> Result<Vec<EconomicEvent>> {
         debug!("Parsing HTML of {} bytes for date {base_date}", html.len());
         let document = Html::parse_document(html);
         let mut events = Vec::new();
         let mut current_date = base_date;
         let mut current_time: Option<NaiveTime> = None;
+        let reference_year = base_date.year();
 
         let row_count = document.select(&self.row_selector).count();
         debug!("Found {row_count} event rows in HTML");
 
         for row in document.select(&self.row_selector) {
-            // TODO(human): Implement the event extraction logic here
-            // Extract: currency, impact, event name, time, actual, forecast, previous
-            // Handle date propagation (some rows don't have dates, inherit from previous)
-            // Handle time propagation similarly
-            // Skip rows with no event data (e.g., holiday rows)
-
-            let event = self.parse_row(&row, &mut current_date, &mut current_time);
+            let event = self.parse_row(&row, &mut current_date, &mut current_time, reference_year);
 
             match event {
                 Ok(Some(e)) => {
@@ -90,25 +88,17 @@ impl CalendarParser {
         row: &scraper::ElementRef,
         current_date: &mut NaiveDate,
         current_time: &mut Option<NaiveTime>,
+        reference_year: i32,
     ) -> Result<Option<EconomicEvent>> {
-        // TODO(human): Implement the row parsing logic
-        //
-        // Steps:
-        // 1. Check if row has a date cell, update current_date if so
-        // 2. Check if row has a time cell, update current_time if so
-        // 3. Extract currency (skip if empty - might be a header row)
-        // 4. Extract impact level from the span's class
-        // 5. Extract event name
-        // 6. Extract actual/forecast/previous values (may be empty)
-        // 7. Combine date + time into datetime
-        //
-        // Hints:
-        // - Use self.currency_selector.select_first(row) pattern
-        // - Impact is determined by class like "icon--ff-impact-red"
-        // - Text content: element.text().collect::<String>().trim()
-        // - Some cells span multiple rows, so values may be inherited
+        // Update date if present in this row
+        let date_text = self.extract_text(row, &self.date_selector);
+        if let Some(parsed_date) = parse_date(&date_text, reference_year) {
+            debug!("Parsed date from row: {parsed_date}");
+            *current_date = parsed_date;
+            // Reset time when date changes - events on new day start fresh
+            *current_time = None;
+        }
 
-        // Placeholder implementation - you'll replace this
         let currency = self.extract_text(row, &self.currency_selector);
         if currency.is_empty() {
             return Ok(None);
@@ -181,6 +171,55 @@ impl CalendarParser {
     }
 }
 
+/// Parse date string from Forex Factory format.
+/// Examples: "Tue Jan 13", "Mon Jan 12", "Wed Feb 5"
+/// The `reference_year` is needed because FF doesn't include year in dates.
+fn parse_date(date_str: &str, reference_year: i32) -> Option<NaiveDate> {
+    let date_str = date_str.trim();
+    if date_str.is_empty() {
+        return None;
+    }
+
+    // FF format: "Tue Jan 13" or "TueJan 13" (sometimes no space after day name)
+    // We need to extract month and day
+    let parts: Vec<&str> = date_str.split_whitespace().collect();
+
+    // Expected: ["Tue", "Jan", "13"] or ["TueJan", "13"]
+    let (month_str, day_str) = match parts.len() {
+        3 => (parts[1], parts[2]),
+        2 => {
+            // Day name might be concatenated with month: "TueJan 13"
+            let first = parts[0];
+            if first.len() >= 6 {
+                (&first[3..], parts[1])
+            } else {
+                return None;
+            }
+        }
+        _ => return None,
+    };
+
+    let month = match month_str.to_lowercase().as_str() {
+        "jan" => 1,
+        "feb" => 2,
+        "mar" => 3,
+        "apr" => 4,
+        "may" => 5,
+        "jun" => 6,
+        "jul" => 7,
+        "aug" => 8,
+        "sep" => 9,
+        "oct" => 10,
+        "nov" => 11,
+        "dec" => 12,
+        _ => return None,
+    };
+
+    let day: u32 = day_str.parse().ok()?;
+
+    NaiveDate::from_ymd_opt(reference_year, month, day)
+}
+
 /// Parse time string from Forex Factory format.
 /// Examples: "8:30am", "2:00pm", "12:30am"
 fn parse_time(time_str: &str) -> Option<NaiveTime> {
@@ -230,5 +269,26 @@ mod tests {
     fn test_parser_creation() {
         let parser = CalendarParser::new();
         assert!(parser.is_ok());
+    }
+
+    #[test]
+    fn test_parse_date() {
+        // Standard format: "Tue Jan 13"
+        assert_eq!(
+            parse_date("Tue Jan 13", 2026),
+            Some(NaiveDate::from_ymd_opt(2026, 1, 13).unwrap())
+        );
+
+        // Different month
+        assert_eq!(
+            parse_date("Mon Feb 3", 2026),
+            Some(NaiveDate::from_ymd_opt(2026, 2, 3).unwrap())
+        );
+
+        // Empty string returns None
+        assert_eq!(parse_date("", 2026), None);
+
+        // Whitespace only returns None
+        assert_eq!(parse_date("   ", 2026), None);
     }
 }
