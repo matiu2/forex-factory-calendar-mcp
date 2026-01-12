@@ -1,7 +1,7 @@
 use chrono::{Datelike, NaiveDate};
 use color_eyre::{Result, eyre::eyre};
 use reqwest::Client;
-use reqwest::header::{ACCEPT, ACCEPT_LANGUAGE, HeaderMap, HeaderValue, USER_AGENT};
+use reqwest::header::{ACCEPT, ACCEPT_LANGUAGE, COOKIE, HeaderMap, HeaderValue, USER_AGENT};
 use std::time::Duration;
 use tracing::{debug, info};
 
@@ -15,7 +15,19 @@ impl HttpCalendarFetcher {
     pub fn new() -> Result<Self> {
         info!("Creating HTTP client for Forex Factory...");
 
+        // Get system timezone to send to Forex Factory
+        let timezone = iana_time_zone::get_timezone().unwrap_or_else(|_| "UTC".to_string());
+        let timezone_encoded = timezone.replace('/', "%2F");
+        info!("Using timezone: {timezone}");
+
         let mut headers = HeaderMap::new();
+
+        // Send timezone cookie so FF returns times in our local timezone
+        let cookie_value = format!("fftimezone={timezone_encoded}");
+        headers.insert(
+            COOKIE,
+            HeaderValue::from_str(&cookie_value).map_err(|e| eyre!("Invalid cookie value: {e}"))?,
+        );
 
         // Mimic a real browser
         headers.insert(
