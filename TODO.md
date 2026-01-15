@@ -19,6 +19,27 @@ MCP server to query economic events from Forex Factory calendar.
 - [x] Test end-to-end with actual Forex Factory data
 - [x] Add local timezone support
 
+## Completed: Impact Display and Country Name Support
+
+### 1. Add Country-to-Currency Mapping
+- [x] Create `src/types/currency.rs` module with country name → currency code mapping
+- [x] Support common variations: "Canada", "Canadian", "CAD" all → "CAD"
+- [x] Handle case-insensitivity
+
+### 2. Update Currency Parsing
+- [x] Modify `parse_currencies()` in `src/mcp/tools.rs` to resolve country names
+- [x] Keep backwards compatibility with existing currency codes
+
+### 3. Add Stars to EventResult
+- [x] Add `impact_stars: u8` field to `EventResult` struct
+- [x] Update `From<EconomicEvent>` impl to populate stars
+
+### 4. Testing & Finalization
+- [x] Add tests for country name resolution
+- [x] Add tests for stars in EventResult
+- [x] cargo clippy && cargo fmt
+- [x] Commit and push
+
 ## Optional / Future
 - [ ] Add caching layer to minimize HTTP requests
 - [ ] Add more sophisticated date parsing (e.g., "next week", "last month")

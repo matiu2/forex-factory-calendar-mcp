@@ -50,6 +50,9 @@ pub struct EventResult {
     /// Impact level: "low", "medium", or "high"
     pub impact: String,
 
+    /// Impact level as stars (1-3)
+    pub impact_stars: u8,
+
     /// Event date and time in ISO 8601 format
     pub datetime: String,
 
@@ -67,13 +70,14 @@ pub struct EventResult {
 }
 
 impl QueryEventsParams {
-    /// Parse currencies from the string (handles "AUD/CHF", "EUR,GBP", "USD")
+    /// Parse currencies from the string (handles "AUD/CHF", "EUR,GBP", "USD", "Canada", etc.)
+    /// Supports country names and demonyms in addition to currency codes.
     pub fn parse_currencies(&self) -> Vec<String> {
         self.currencies
             .as_ref()
             .map(|s| {
-                s.split(['/', ',', '-', ' '])
-                    .map(|c| c.trim().to_uppercase())
+                s.split(['/', ',', '-'])
+                    .map(crate::types::resolve_currency)
                     .filter(|c| !c.is_empty())
                     .collect()
             })
@@ -116,6 +120,7 @@ impl From<crate::types::EconomicEvent> for EventResult {
             name: event.name,
             currency: event.currency,
             impact: event.impact.to_string().to_lowercase(),
+            impact_stars: event.impact.stars(),
             datetime: event.datetime.to_rfc3339(),
             actual: event.actual,
             forecast: event.forecast,
@@ -153,6 +158,54 @@ mod tests {
             min_impact: None,
         };
         assert!(params.parse_currencies().is_empty());
+    }
+
+    #[test]
+    fn test_parse_currencies_with_country_names() {
+        // Single country name
+        let params = QueryEventsParams {
+            currencies: Some("Canada".to_string()),
+            from_date: None,
+            to_date: None,
+            min_impact: None,
+        };
+        assert_eq!(params.parse_currencies(), vec!["CAD"]);
+
+        // Country name with currency code
+        let params = QueryEventsParams {
+            currencies: Some("Canada/USD".to_string()),
+            from_date: None,
+            to_date: None,
+            min_impact: None,
+        };
+        assert_eq!(params.parse_currencies(), vec!["CAD", "USD"]);
+
+        // Multiple country names
+        let params = QueryEventsParams {
+            currencies: Some("Japan,Australia".to_string()),
+            from_date: None,
+            to_date: None,
+            min_impact: None,
+        };
+        assert_eq!(params.parse_currencies(), vec!["JPY", "AUD"]);
+
+        // Multi-word country name
+        let params = QueryEventsParams {
+            currencies: Some("United States".to_string()),
+            from_date: None,
+            to_date: None,
+            min_impact: None,
+        };
+        assert_eq!(params.parse_currencies(), vec!["USD"]);
+
+        // Case insensitive
+        let params = QueryEventsParams {
+            currencies: Some("CANADA".to_string()),
+            from_date: None,
+            to_date: None,
+            min_impact: None,
+        };
+        assert_eq!(params.parse_currencies(), vec!["CAD"]);
     }
 
     #[test]

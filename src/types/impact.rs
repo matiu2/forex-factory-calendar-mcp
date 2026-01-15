@@ -16,7 +16,6 @@ pub enum Impact {
 
 impl Impact {
     /// Convert to star rating (1-3 stars)
-    #[allow(dead_code)]
     pub fn stars(self) -> u8 {
         match self {
             Impact::Low => 1,
