@@ -1,4 +1,5 @@
 use chrono::NaiveDate;
+use forex_factory::{EconomicEvent, Impact, resolve_currency};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -77,7 +78,7 @@ impl QueryEventsParams {
             .as_ref()
             .map(|s| {
                 s.split(['/', ',', '-'])
-                    .map(crate::types::resolve_currency)
+                    .map(resolve_currency)
                     .filter(|c| !c.is_empty())
                     .collect()
             })
@@ -99,9 +100,7 @@ impl QueryEventsParams {
     }
 
     /// Parse min_impact string to impact level (1-3 or "low"/"medium"/"high")
-    pub fn parse_min_impact(&self) -> Option<crate::types::Impact> {
-        use crate::types::Impact;
-
+    pub fn parse_min_impact(&self) -> Option<Impact> {
         self.min_impact.as_ref().and_then(|s| {
             let s = s.trim().to_lowercase();
             match s.as_str() {
@@ -114,8 +113,8 @@ impl QueryEventsParams {
     }
 }
 
-impl From<crate::types::EconomicEvent> for EventResult {
-    fn from(event: crate::types::EconomicEvent) -> Self {
+impl From<EconomicEvent> for EventResult {
+    fn from(event: EconomicEvent) -> Self {
         Self {
             name: event.name,
             currency: event.currency,
@@ -229,8 +228,6 @@ mod tests {
 
     #[test]
     fn test_parse_min_impact() {
-        use crate::types::Impact;
-
         let params = QueryEventsParams {
             currencies: None,
             from_date: None,

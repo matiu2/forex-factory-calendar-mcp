@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use forex_factory::{CalendarService, EventQuery, Impact};
 use rmcp::{
     ErrorData as McpError, ServerHandler,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
@@ -8,9 +9,6 @@ use rmcp::{
 };
 use tokio::sync::RwLock;
 use tracing::{error, info};
-
-use crate::service::CalendarService;
-use crate::types::{EventQuery, Impact};
 
 use super::tools::{EventResult, QueryEventsParams, WeekAroundParams};
 

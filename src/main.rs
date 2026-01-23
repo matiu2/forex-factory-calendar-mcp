@@ -1,7 +1,4 @@
 mod mcp;
-mod scraper;
-mod service;
-mod types;
 
 use color_eyre::Result;
 use rmcp::ServiceExt;
